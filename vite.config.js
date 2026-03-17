@@ -2,7 +2,17 @@ import { defineConfig } from 'vite'
 import vue from '@vitejs/plugin-vue'
 
 export default defineConfig({
-  plugins: [vue()],
+  plugins: [
+    vue({
+      template: {
+        compilerOptions: {
+          isCustomElement: tagName => {
+            return tagName === 'vue-advanced-chat' || tagName === 'emoji-picker'
+          }
+        }
+      }
+    })
+  ],
   server: {
     proxy: {
       '/iptv-proxy': {

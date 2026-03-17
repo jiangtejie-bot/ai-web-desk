@@ -5,7 +5,9 @@
     :style="maximized ? { zIndex } : { 
       zIndex,
       width: width + 'px',
-      height: height + 'px'
+      height: height + 'px',
+      left: x + 'px',
+      top: y + 'px'
     }"
     @mousedown="$emit('mousedown')"
   >
@@ -38,7 +40,7 @@
       <div class="window-spacer"></div>
     </div>
     
-    <div class="window-content">
+    <div class="window-content" ref="windowContent">
       <slot></slot>
     </div>
     
@@ -66,6 +68,14 @@ export default {
       type: Number,
       default: 100
     },
+    x: {
+      type: Number,
+      default: 0
+    },
+    y: {
+      type: Number,
+      default: 0
+    },
     width: {
       type: Number,
       default: 800
@@ -83,9 +93,26 @@ export default {
       resizeStart: { x: 0, y: 0, width: 0, height: 0 },
       dragPosition: { x: 0, y: 0 },
       resizeSize: { width: 0, height: 0 },
-      animationFrameId: null
+      animationFrameId: null,
+      resizeObserver: null
     }
   },
+
+  mounted() {
+    if (this.$refs.windowContent) {
+      this.resizeObserver = new ResizeObserver(() => {
+        this.$emit('content-resize')
+      })
+      this.resizeObserver.observe(this.$refs.windowContent)
+    }
+  },
+
+  beforeUnmount() {
+    if (this.resizeObserver && this.$refs.windowContent) {
+      this.resizeObserver.unobserve(this.$refs.windowContent)
+    }
+  },
+
   methods: {
     startDrag(event) {
       if (event.target.closest('.window-controls')) return
@@ -135,6 +162,11 @@ export default {
         cancelAnimationFrame(this.animationFrameId)
         this.animationFrameId = null
       }
+
+      const style = window.getComputedStyle(this.$el)
+      const currentLeft = parseFloat(style.left) || 0
+      const currentTop = parseFloat(style.top) || 0
+      this.$emit('update:position', { x: currentLeft, y: currentTop })
     },
     startResize(event) {
       this.isResizing = true
@@ -176,6 +208,11 @@ export default {
         cancelAnimationFrame(this.animationFrameId)
         this.animationFrameId = null
       }
+
+      const style = window.getComputedStyle(this.$el)
+      const currentWidth = parseFloat(style.width) || 0
+      const currentHeight = parseFloat(style.height) || 0
+      this.$emit('update:size', { width: currentWidth, height: currentHeight })
     }
   }
 }

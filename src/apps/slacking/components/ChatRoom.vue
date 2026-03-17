@@ -1,125 +1,254 @@
 <template>
-  <div class="chat-room">
-    <div class="chat-messages" ref="messagesContainer">
-      <div 
-        v-for="(message, index) in messages" 
-        :key="index" 
-        class="message"
-        :class="{ 'own-message': message.isOwn }"
-      >
-        <div class="message-avatar">
-          <img :src="message.avatar" :alt="message.name" />
-        </div>
-        <div class="message-content">
-          <div class="message-header">
-            <span class="message-name">{{ message.name }}</span>
-            <span class="message-time">{{ message.time }}</span>
-          </div>
-          <div class="message-text">{{ message.text }}</div>
-        </div>
-      </div>
-    </div>
-
-    <div class="chat-input-area">
-      <div class="input-actions">
-        <button class="action-btn" title="表情">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <circle cx="12" cy="12" r="10"/>
-            <path d="M8 14s1.5 2 4 2 4-2 4-2"/>
-            <line x1="9" y1="9" x2="9.01" y2="9"/>
-            <line x1="15" y1="9" x2="15.01" y2="9"/>
-          </svg>
-        </button>
-        <button class="action-btn" title="图片">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
-            <circle cx="8.5" cy="8.5" r="1.5"/>
-            <polyline points="21 15 16 10 5 21"/>
-          </svg>
-        </button>
-        <button class="action-btn" title="文件">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/>
-            <polyline points="13 2 13 9 20 9"/>
-          </svg>
-        </button>
-      </div>
-      <div class="input-wrapper">
-        <input 
-          v-model="inputText" 
-          @keypress.enter="sendMessage"
-          placeholder="输入消息..."
-          class="message-input"
-        />
-        <button class="send-btn" @click="sendMessage" :disabled="!inputText.trim()">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <line x1="22" y1="2" x2="11" y2="13"/>
-            <polygon points="22 2 15 22 11 13 2 9 22 2"/>
-          </svg>
-        </button>
-      </div>
-    </div>
+  <div class="chat-room" ref="chatRoom">
+    <vue-advanced-chat
+      ref="chatComponent"
+      :height="chatHeight"
+      :current-user-id="currentUserId"
+      :rooms="JSON.stringify(rooms)"
+      :rooms-loaded="true"
+      :messages="JSON.stringify(messages)"
+      :messages-loaded="true"
+      :text-messages="JSON.stringify(textMessages)"
+      :room-id="roomId"
+      :show-footer="true"
+      :show-header="false"
+      :show-send-icon="true"
+      :show-rooms-list="false"
+      :show-room-info="false"
+      :show-user-names="true"
+      :show-timestamp="true"
+      :show-date="true"
+      :show-reaction-emojis="false"
+      :show-audio="false"
+      :show-files="false"
+      :show-new-messages-divider="false"
+      :show-launcher="false"
+      :show-message-status-icon="false"
+      :show-avatar="true"
+      :text-formatting="true"
+      :link-options="JSON.stringify({ disabled: false, target: '_blank', rel: 'nofollow' })"
+      @send-message="sendMessage($event.detail[0])"
+      @fetch-messages="fetchMessages($event.detail[0])"
+    />
   </div>
 </template>
 
 <script>
+import { register } from 'vue-advanced-chat'
+import { nextTick, onMounted } from 'vue'
+register()
+
 export default {
   name: 'ChatRoom',
   data() {
+    const currentUser = localStorage.getItem('currentUser') || 'Guest'
+    
     return {
-      inputText: '',
+      currentUserId: currentUser,
+      currentUser: currentUser,
+      roomId: 'slacking-room',
+      chatHeight: '100%',
+      textMessages: {
+        TEXTAREA_PLACEHOLDER: '输入消息...',
+        TEXTAREA_SEND_BUTTON: '发送'
+      },
+      rooms: [
+        {
+          roomId: 'slacking-room',
+          roomName: '摸鱼群',
+          avatar: 'https://api.dicebear.com/7.x/identicon/svg?seed=slacking',
+          users: [
+            { _id: currentUser, username: currentUser },
+            { _id: 'felix', username: '摸鱼达人' },
+            { _id: 'workaholic', username: '工作狂' },
+            { _id: 'expert', username: '摸鱼专家' }
+          ],
+          unread: 0
+        }
+      ],
       messages: [
         {
-          name: '摸鱼达人',
+          _id: 1,
+          content: '今天天气不错，适合摸鱼！🎣',
+          senderId: 'felix',
+          username: '摸鱼达人',
           avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Felix',
-          text: '今天天气不错，适合摸鱼！🎣',
-          time: '10:30',
-          isOwn: false
+          date: '今天',
+          timestamp: '10:30',
+          system: false,
+          saved: true
         },
         {
-          name: '工作狂',
+          _id: 2,
+          content: '别摸鱼了，赶紧干活！',
+          senderId: 'workaholic',
+          username: '工作狂',
           avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Aneka',
-          text: '别摸鱼了，赶紧干活！',
-          time: '10:32',
-          isOwn: false
+          date: '今天',
+          timestamp: '10:35',
+          system: false,
+          saved: true
         },
         {
-          name: '摸鱼达人',
+          _id: 3,
+          content: '工作是为了更好地摸鱼！😎',
+          senderId: 'felix',
+          username: '摸鱼达人',
           avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Felix',
-          text: '工作是为了更好地摸鱼！😎',
-          time: '10:33',
-          isOwn: false
+          date: '今天',
+          timestamp: '10:36',
+          system: false,
+          saved: true
         },
         {
-          name: '我',
-          avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Me',
-          text: '说得对！一起摸鱼吧！',
-          time: '10:35',
-          isOwn: true
+          _id: 4,
+          content: '说得对！一起摸鱼吧！',
+          senderId: currentUser,
+          username: currentUser,
+          avatar: `https://api.dicebear.com/7.x/avataaars/svg?seed=${currentUser}`,
+          date: '今天',
+          timestamp: '10:37',
+          system: false,
+          saved: true
         }
       ]
     }
   },
+
   mounted() {
-    this.scrollToBottom()
-  },
-  methods: {
-    sendMessage() {
-      if (!this.inputText.trim()) return
-
-      const now = new Date()
-      const time = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`
-
-      this.messages.push({
-        name: '我',
-        avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Me',
-        text: this.inputText,
-        time: time,
-        isOwn: true
+    this.updateChatHeight()
+    window.addEventListener('resize', this.updateChatHeight)
+    
+    if (this.$refs.chatRoom) {
+      this.resizeObserver = new ResizeObserver(() => {
+        this.updateChatHeight()
       })
+      this.resizeObserver.observe(this.$refs.chatRoom)
+    }
 
-      this.inputText = ''
-      this.$nextTick(() => {
+    this.$el.addEventListener('window-resize', this.handleWindowResize)
+  },
+
+  beforeUnmount() {
+    window.removeEventListener('resize', this.updateChatHeight)
+    if (this.resizeObserver && this.$refs.chatRoom) {
+      this.resizeObserver.unobserve(this.$refs.chatRoom)
+    }
+    this.$el.removeEventListener('window-resize', this.handleWindowResize)
+  },
+
+  methods: {
+    handleWindowResize(event) {
+      if (event.detail && event.detail.height) {
+        this.chatHeight = `${event.detail.height}px`
+      }
+    },
+
+    updateChatHeight() {
+      if (this.$refs.chatRoom) {
+        const height = this.$refs.chatRoom.clientHeight
+        this.chatHeight = `${height}px`
+      }
+    },
+
+    fetchMessages({ options = {} }) {
+      if (options.reset) {
+        this.messages = this.addMessages(true)
+      } else {
+        this.messages = [...this.addMessages(), ...this.messages]
+        this.messagesLoaded = true
+      }
+    },
+
+    addMessages(reset) {
+      const messages = []
+
+      if (reset) {
+        const initialMessages = [
+          {
+            _id: 1,
+            content: '今天天气不错，适合摸鱼！🎣',
+            senderId: 'felix',
+            username: '摸鱼达人',
+            avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Felix',
+            date: '今天',
+            timestamp: '10:30',
+            system: false,
+            saved: true
+          },
+          {
+            _id: 2,
+            content: '别摸鱼了，赶紧干活！',
+            senderId: 'workaholic',
+            username: '工作狂',
+            avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Aneka',
+            date: '今天',
+            timestamp: '10:35',
+            system: false,
+            saved: true
+          },
+          {
+            _id: 3,
+            content: '工作是为了更好地摸鱼！😎',
+            senderId: 'felix',
+            username: '摸鱼达人',
+            avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Felix',
+            date: '今天',
+            timestamp: '10:36',
+            system: false,
+            saved: true
+          },
+          {
+            _id: 4,
+            content: '说得对！一起摸鱼吧！',
+            senderId: this.currentUser,
+            username: this.currentUser,
+            avatar: `https://api.dicebear.com/7.x/avataaars/svg?seed=${this.currentUser}`,
+            date: '今天',
+            timestamp: '10:37',
+            system: false,
+            saved: true
+          }
+        ]
+        messages.push(...initialMessages)
+      } else {
+        for (let i = 0; i < 10; i++) {
+          messages.push({
+            _id: this.messages.length + i,
+            content: `历史消息 ${i + 1}`,
+            senderId: 'felix',
+            username: '摸鱼达人',
+            avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Felix',
+            date: '昨天',
+            timestamp: '09:00',
+            system: false,
+            saved: true
+          })
+        }
+      }
+
+      return messages
+    },
+
+    sendMessage(message) {
+      const newMessage = {
+        _id: Date.now(),
+        content: message.content,
+        senderId: this.currentUserId,
+        username: this.currentUser,
+        avatar: `https://api.dicebear.com/7.x/avataaars/svg?seed=${this.currentUser}`,
+        timestamp: new Date().toString().substring(16, 21),
+        date: new Date().toDateString(),
+        system: false,
+        distributed: true
+      }
+      
+      this.messages = [
+        ...this.messages,
+        newMessage
+      ]
+
+      nextTick(() => {
         this.scrollToBottom()
       })
 
@@ -127,43 +256,51 @@ export default {
         this.receiveAutoReply()
       }, 1000 + Math.random() * 2000)
     },
+
     receiveAutoReply() {
       const replies = [
-        '哈哈，说得对！',
-        '摸鱼万岁！🎉',
-        '老板来了，快假装工作！',
-        '今天摸鱼了吗？',
-        '工作是为了更好地摸鱼！',
-        '摸鱼也是一种工作态度！',
-        '摸鱼使我快乐！',
-        '摸鱼使我进步！'
+        { content: '哈哈，说得对！', senderId: 'felix', username: '摸鱼达人', avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Felix' },
+        { content: '摸鱼万岁！🎉', senderId: 'expert', username: '摸鱼专家', avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Bob' },
+        { content: '老板来了，快假装工作！', senderId: 'workaholic', username: '工作狂', avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Aneka' },
+        { content: '今天摸鱼了吗？', senderId: 'felix', username: '摸鱼达人', avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Felix' },
+        { content: '工作是为了更好地摸鱼！', senderId: 'expert', username: '摸鱼专家', avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Bob' },
+        { content: '摸鱼也是一种工作态度！', senderId: 'felix', username: '摸鱼达人', avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Felix' },
+        { content: '摸鱼使我快乐！', senderId: 'expert', username: '摸鱼专家', avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Bob' },
+        { content: '摸鱼使我进步！', senderId: 'felix', username: '摸鱼达人', avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Felix' }
       ]
       
-      const names = ['摸鱼达人', '工作狂', '摸鱼小能手', '摸鱼专家']
-      const avatars = ['Felix', 'Aneka', 'Bob', 'Charlie']
+      const randomReply = replies[Math.floor(Math.random() * replies.length)]
       
-      const randomIndex = Math.floor(Math.random() * replies.length)
-      const nameIndex = Math.floor(Math.random() * names.length)
-      
-      const now = new Date()
-      const time = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`
+      this.messages = [
+        ...this.messages,
+        {
+          _id: Date.now(),
+          content: randomReply.content,
+          senderId: randomReply.senderId,
+          username: randomReply.username,
+          avatar: randomReply.avatar,
+          timestamp: new Date().toString().substring(16, 21),
+          date: new Date().toDateString(),
+          system: false
+        }
+      ]
 
-      this.messages.push({
-        name: names[nameIndex],
-        avatar: `https://api.dicebear.com/7.x/avataaars/svg?seed=${avatars[nameIndex]}`,
-        text: replies[randomIndex],
-        time: time,
-        isOwn: false
-      })
-
-      this.$nextTick(() => {
+      nextTick(() => {
         this.scrollToBottom()
       })
     },
+
     scrollToBottom() {
-      const container = this.$refs.messagesContainer
-      if (container) {
-        container.scrollTop = container.scrollHeight
+      try {
+        const chatElement = this.$refs.chatComponent
+        if (chatElement) {
+          const messagesContainer = chatElement.shadowRoot?.querySelector('.vac-room-messages')
+          if (messagesContainer) {
+            messagesContainer.scrollTop = messagesContainer.scrollHeight
+          }
+        }
+      } catch (error) {
+        console.error('Failed to scroll to bottom:', error)
       }
     }
   }
@@ -175,67 +312,112 @@ export default {
   display: flex;
   flex-direction: column;
   height: 100%;
+  width: 100%;
   background: #f5f5f5;
+  overflow: hidden;
+  position: relative;
 }
 
-.chat-messages {
-  flex: 1;
-  overflow-y: auto;
-  padding: 20px;
+.chat-room :deep(.vac-room-container) {
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  height: 100%;
+  width: 100%;
 }
 
-.message {
+.chat-room :deep(.vac-room-messages) {
+  flex: 1;
+  overflow-y: auto;
+  min-height: 0;
+  overflow-x: hidden;
+}
+
+.chat-room :deep(.vac-room-footer) {
+  flex-shrink: 0;
+  flex-grow: 0;
+  position: relative;
+  z-index: 10;
+}
+
+.chat-room :deep(.vac-box-footer) {
+  flex-shrink: 0;
+  flex-grow: 0;
+}
+
+.chat-room :deep(.vac-message-container) {
   display: flex;
-  gap: 12px;
-  max-width: 70%;
+  align-items: flex-start;
+  margin-bottom: 16px;
 }
 
-.message.own-message {
-  align-self: flex-end;
-  flex-direction: row-reverse;
-}
-
-.message-avatar {
+.chat-room :deep(.vac-avatar) {
   width: 40px;
   height: 40px;
+  min-width: 40px;
+  min-height: 40px;
   border-radius: 50%;
   overflow: hidden;
   flex-shrink: 0;
+  align-self: flex-start;
 }
 
-.message-avatar img {
+.chat-room :deep(.vac-avatar img) {
   width: 100%;
   height: 100%;
   object-fit: cover;
 }
 
-.message-content {
+.chat-room :deep(.vac-message-box) {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  max-width: 70%;
+  margin-left: 12px;
+  align-self: flex-start;
 }
 
-.message-header {
+.chat-room :deep(.vac-message-box.vac-message-current) {
+  flex-direction: row-reverse;
+  margin-left: 0;
+  margin-right: 12px;
+  align-self: flex-end;
+}
+
+.chat-room :deep(.vac-message-box.vac-message-current .vac-avatar) {
+  margin-left: 12px;
+  margin-right: 0;
+}
+
+.chat-room :deep(.vac-message-header) {
   display: flex;
   align-items: center;
   gap: 8px;
-  font-size: 12px;
-  color: #999;
+  margin-bottom: 4px;
+  font-size: 13px;
+  font-weight: 500;
+  color: #666;
+  min-height: 20px;
 }
 
-.message.own-message .message-header {
-  flex-direction: row-reverse;
-}
-
-.message-name {
+.chat-room :deep(.vac-message-header .vac-message-username) {
   font-weight: 600;
   color: #333;
 }
 
-.message-text {
+.chat-room :deep(.vac-message-header .vac-message-time) {
+  font-size: 12px;
+  color: #999;
+  font-weight: 400;
+}
+
+.chat-room :deep(.vac-message-box.vac-message-current .vac-message-header) {
+  flex-direction: row-reverse;
+}
+
+.chat-room :deep(.vac-message-box.vac-message-current .vac-message-header .vac-message-username) {
+  color: #667eea;
+}
+
+.chat-room :deep(.vac-message-content) {
   background: white;
   padding: 12px 16px;
   border-radius: 12px;
@@ -243,103 +425,20 @@ export default {
   line-height: 1.5;
   color: #333;
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+  border-radius: 12px 12px 12px 0;
 }
 
-.message.own-message .message-text {
+.chat-room :deep(.vac-message-box.vac-message-current .vac-message-content) {
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   color: white;
   border-radius: 12px 12px 0 12px;
 }
 
-.message:not(.own-message) .message-text {
-  border-radius: 12px 12px 12px 0;
+.chat-room :deep(.vac-message-box .vac-avatar) {
+  align-self: flex-start;
 }
 
-.chat-input-area {
-  background: white;
-  padding: 16px;
-  border-top: 1px solid #e5e5e5;
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-
-.input-actions {
-  display: flex;
-  gap: 12px;
-}
-
-.action-btn {
-  width: 36px;
-  height: 36px;
-  border: none;
-  background: transparent;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 50%;
-  transition: background 0.2s ease;
-  color: #666;
-}
-
-.action-btn:hover {
-  background: #f5f5f5;
-  color: #333;
-}
-
-.action-btn svg {
-  width: 20px;
-  height: 20px;
-}
-
-.input-wrapper {
-  display: flex;
-  gap: 12px;
-  align-items: center;
-}
-
-.message-input {
-  flex: 1;
-  padding: 12px 16px;
-  border: 1px solid #e5e5e5;
-  border-radius: 24px;
-  font-size: 14px;
-  outline: none;
-  transition: border-color 0.2s ease;
-}
-
-.message-input:focus {
-  border-color: #667eea;
-}
-
-.send-btn {
-  width: 44px;
-  height: 44px;
-  border: none;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  color: white;
-  border-radius: 50%;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: transform 0.2s ease, box-shadow 0.2s ease;
-}
-
-.send-btn:hover:not(:disabled) {
-  transform: scale(1.05);
-  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
-}
-
-.send-btn:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
-
-.send-btn svg {
-  width: 20px;
-  height: 20px;
-  transform: translateX(2px);
+.chat-room :deep(.vac-message-box.vac-message-current .vac-avatar) {
+  align-self: flex-start;
 }
 </style>

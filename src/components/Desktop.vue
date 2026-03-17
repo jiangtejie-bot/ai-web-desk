@@ -35,17 +35,18 @@
         :minimized="window.minimized"
         :maximized="window.maximized"
         :z-index="window.zIndex"
+        :x="window.x"
+        :y="window.y"
         :width="window.width"
         :height="window.height"
-        :style="!window.maximized ? { 
-          left: window.x + 'px', 
-          top: window.y + 'px'
-        } : {}"
         @close="closeWindow(window.id)"
         @minimize="minimizeWindow(window.id)"
         @maximize="maximizeWindow(window.id)"
         @focus="focusWindow(window.id)"
         @mousedown="focusWindow(window.id)"
+        @update:position="updateWindowPosition(window.id, $event)"
+        @update:size="updateWindowSize(window.id, $event)"
+        @content-resize="handleWindowContentResize(window.id)"
       >
         <component 
           :is="window.component" 
@@ -61,11 +62,30 @@
       @minimize-window="minimizeWindow"
       @close-window="closeWindow"
       @open-assistant="openAssistant"
+      @open-app="openApp"
+      @open-settings="openSettings"
+      @power-off="lockScreen"
+    />
+
+    <lock-screen 
+      v-if="isLocked"
+      @login="handleLogin"
     />
 
     <assistant-dialog 
       v-if="showAssistant"
       @close="showAssistant = false"
+    />
+
+    <confirm-dialog
+      v-if="showConfirmDialog"
+      :title="confirmDialogConfig.title"
+      :message="confirmDialogConfig.message"
+      :type="confirmDialogConfig.type"
+      :confirm-text="confirmDialogConfig.confirmText"
+      :cancel-text="confirmDialogConfig.cancelText"
+      @confirm="handleConfirm"
+      @cancel="showConfirmDialog = false"
     />
   </div>
 </template>
@@ -76,12 +96,15 @@ import { apps } from '../config/apps.js'
 import Window from './Window.vue'
 import Taskbar from './Taskbar.vue'
 import AssistantDialog from './AssistantDialog.vue'
+import ConfirmDialog from './ConfirmDialog.vue'
+import LockScreen from './LockScreen.vue'
 import BrowserIcon from '../apps/browser/icons/BrowserIcon.vue'
 import SettingsIcon from '../apps/settings/icons/SettingsIcon.vue'
 import TVIcon from '../apps/tv/icons/TVIcon.vue'
 import BookmarkIcon from '../apps/bookmarks/icons/BookmarkIcon.vue'
 import TranslatorIcon from '../apps/translator/icons/TranslatorIcon.vue'
 import SlackingIcon from '../apps/slacking/icons/SlackingIcon.vue'
+import CalculatorIcon from '../apps/calculator/icons/CalculatorIcon.vue'
 
 export default {
   name: 'Desktop',
@@ -89,16 +112,19 @@ export default {
     Window,
     Taskbar,
     AssistantDialog,
+    ConfirmDialog,
+    LockScreen,
     BrowserIcon,
     SettingsIcon,
     TVIcon,
     BookmarkIcon,
     TranslatorIcon,
-    SlackingIcon
+    SlackingIcon,
+    CalculatorIcon
   },
   data() {
     return {
-      apps: apps.map((app, index) => ({
+      apps: apps.filter(app => !app.systemApp).map((app, index) => ({
         ...app,
         iconX: 0,
         iconY: index * 110
@@ -108,6 +134,17 @@ export default {
       windowIdCounter: 0,
       zIndexCounter: 100,
       showAssistant: false,
+      showConfirmDialog: false,
+      isLocked: false,
+      currentUser: localStorage.getItem('currentUser') || '',
+      confirmDialogConfig: {
+        title: '',
+        message: '',
+        type: 'warning',
+        confirmText: '确定',
+        cancelText: '取消'
+      },
+      confirmCallback: null,
       draggingApp: null,
       dragOffset: { x: 0, y: 0 },
       gridSize: 110,
@@ -281,8 +318,82 @@ export default {
         window.minimized = false
       }
     },
+    updateWindowPosition(windowId, position) {
+      const window = this.windows.find(w => w.id === windowId)
+      if (window && !window.maximized) {
+        window.x = position.x
+        window.y = position.y
+      }
+    },
+    updateWindowSize(windowId, size) {
+      const window = this.windows.find(w => w.id === windowId)
+      if (window && !window.maximized) {
+        window.width = size.width
+        window.height = size.height
+      }
+    },
+    handleWindowContentResize(windowId) {
+      const window = this.windows.find(w => w.id === windowId)
+      if (window && window.appId === 'slacking') {
+        this.$nextTick(() => {
+          const windowEl = document.querySelector(`.window[data-window-id="${windowId}"]`)
+          if (windowEl) {
+            const contentEl = windowEl.querySelector('.window-content')
+            if (contentEl) {
+              const event = new CustomEvent('window-resize', {
+                detail: { height: contentEl.clientHeight }
+              })
+              contentEl.dispatchEvent(event)
+            }
+          }
+        })
+      }
+    },
     openAssistant() {
       this.showAssistant = true
+    },
+    openCalculator() {
+      const calculatorApp = {
+        id: 'calculator',
+        name: '计算器',
+        component: () => import('../apps/calculator/CalculatorApp.vue'),
+        defaultWidth: 320,
+        defaultHeight: 480
+      }
+      this.openApp(calculatorApp)
+    },
+    openSettings() {
+      const settingsApp = this.apps.find(app => app.id === 'settings')
+      if (settingsApp) {
+        this.openApp(settingsApp)
+      }
+    },
+    lockScreen() {
+      this.isLocked = true
+    },
+    handleLogin(username) {
+      this.currentUser = username
+      localStorage.setItem('currentUser', username)
+      this.isLocked = false
+    },
+    powerOff() {
+      this.confirmDialogConfig = {
+        title: '确认关机',
+        message: '确定要关闭系统吗？所有未保存的数据可能会丢失。',
+        type: 'danger',
+        confirmText: '关机',
+        cancelText: '取消'
+      }
+      this.confirmCallback = () => {
+        alert('系统关机中...')
+      }
+      this.showConfirmDialog = true
+    },
+    handleConfirm() {
+      if (this.confirmCallback) {
+        this.confirmCallback()
+      }
+      this.showConfirmDialog = false
     },
     async handleOpenGame(gameId) {
       const gameApps = {

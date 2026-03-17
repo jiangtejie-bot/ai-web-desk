@@ -1,7 +1,7 @@
 <template>
   <div class="taskbar">
     <div class="taskbar-start">
-      <button class="start-btn" @click="$emit('start-menu')">
+      <button class="start-btn" @click="showStartMenu = !showStartMenu">
         <svg viewBox="0 0 24 24" fill="currentColor">
           <path d="M3 3h8v8H3V3zm10 0h8v8h-8V3zM3 13h8v8H3v-8zm10 0h8v8h-8v-8z"/>
         </svg>
@@ -52,6 +52,14 @@
       </div>
     </div>
 
+    <start-menu 
+      v-if="showStartMenu"
+      @close="showStartMenu = false"
+      @open-app="$emit('open-app', $event)"
+      @open-settings="$emit('open-settings')"
+      @power-off="$emit('power-off')"
+    />
+
     <calendar-dialog 
       v-if="showCalendar"
       @close="showCalendar = false"
@@ -61,11 +69,13 @@
 
 <script>
 import CalendarDialog from './CalendarDialog.vue'
+import StartMenu from './StartMenu.vue'
 
 export default {
   name: 'Taskbar',
   components: {
-    CalendarDialog
+    CalendarDialog,
+    StartMenu
   },
   props: {
     windows: {
@@ -78,6 +88,7 @@ export default {
       currentTime: '',
       currentDate: '',
       showCalendar: false,
+      showStartMenu: false,
       timerInterval: null
     }
   },
@@ -89,11 +100,24 @@ export default {
   mounted() {
     this.updateTime()
     this.timerInterval = setInterval(this.updateTime, 1000)
+    document.addEventListener('click', this.handleGlobalClick)
   },
   beforeDestroy() {
     if (this.timerInterval) clearInterval(this.timerInterval)
+    document.removeEventListener('click', this.handleGlobalClick)
   },
   methods: {
+    handleGlobalClick(event) {
+      if (this.showStartMenu) {
+        const startMenu = this.$el.querySelector('.start-menu-overlay')
+        if (startMenu && !startMenu.contains(event.target)) {
+          const startBtn = this.$el.querySelector('.start-btn')
+          if (!startBtn || !startBtn.contains(event.target)) {
+            this.showStartMenu = false
+          }
+        }
+      }
+    },
     updateTime() {
       const now = new Date()
       this.currentTime = now.toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' })

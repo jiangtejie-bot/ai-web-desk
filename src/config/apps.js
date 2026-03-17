@@ -5,7 +5,8 @@ export const apps = [
     icon: 'BrowserIcon',
     component: () => import('../apps/browser/BrowserApp.vue'),
     defaultWidth: 1200,
-    defaultHeight: 800
+    defaultHeight: 800,
+    systemApp: false
   },
   {
     id: 'settings',
@@ -13,7 +14,8 @@ export const apps = [
     icon: 'SettingsIcon',
     component: () => import('../apps/settings/SettingsApp.vue'),
     defaultWidth: 900,
-    defaultHeight: 650
+    defaultHeight: 650,
+    systemApp: true
   },
   {
     id: 'tv',
@@ -21,7 +23,8 @@ export const apps = [
     icon: 'TVIcon',
     component: () => import('../apps/tv/TVApp.vue'),
     defaultWidth: 1200,
-    defaultHeight: 800
+    defaultHeight: 800,
+    systemApp: false
   },
   {
     id: 'bookmarks',
@@ -29,7 +32,8 @@ export const apps = [
     icon: 'BookmarkIcon',
     component: () => import('../apps/bookmarks/BookmarksApp.vue'),
     defaultWidth: 1100,
-    defaultHeight: 700
+    defaultHeight: 700,
+    systemApp: false
   },
   {
     id: 'translator',
@@ -37,7 +41,8 @@ export const apps = [
     icon: 'TranslatorIcon',
     component: () => import('../apps/translator/TranslatorApp.vue'),
     defaultWidth: 900,
-    defaultHeight: 700
+    defaultHeight: 700,
+    systemApp: false
   },
   {
     id: 'slacking',
@@ -45,6 +50,16 @@ export const apps = [
     icon: 'SlackingIcon',
     component: () => import('../apps/slacking/SlackingApp.vue'),
     defaultWidth: 1000,
-    defaultHeight: 700
+    defaultHeight: 700,
+    systemApp: false
+  },
+  {
+    id: 'calculator',
+    name: '计算器',
+    icon: 'CalculatorIcon',
+    component: () => import('../apps/calculator/CalculatorApp.vue'),
+    defaultWidth: 320,
+    defaultHeight: 480,
+    systemApp: true
   }
 ]
