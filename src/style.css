@@ -1,0 +1,64 @@
+/* CSS Variables - 马卡龙科技风配色 */
+:root {
+  --bg-primary: #0f1419;
+  --bg-secondary: #1a1f2e;
+  --bg-tertiary: #242b3d;
+  --bg-panel: rgba(26, 31, 46, 0.85);
+  
+  --mint: #7EE8C7;
+  --mint-dim: rgba(126, 232, 199, 0.15);
+  --lavender: #B8B5FF;
+  --lavender-dim: rgba(184, 181, 255, 0.15);
+  --sky: #7EC8E3;
+  --sky-dim: rgba(126, 200, 227, 0.15);
+  --coral: #FF8A80;
+  --coral-dim: rgba(255, 138, 128, 0.15);
+  --peach: #FFB86C;
+  --peach-dim: rgba(255, 184, 108, 0.15);
+  
+  --text-primary: #e8eaed;
+  --text-secondary: #9aa0a6;
+  --text-muted: #5f6368;
+  
+  --border-color: rgba(126, 232, 199, 0.2);
+  --glow-mint: 0 0 20px rgba(126, 232, 199, 0.3);
+  --glow-lavender: 0 0 20px rgba(184, 181, 255, 0.3);
+  
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 16px;
+}
+
+/* Reset & Base */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: 'DM Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  min-height: 100vh;
+  overflow: hidden;
+}
+
+#app {
+  width: 100%;
+  min-height: 100vh;
+  position: relative;
+}
+
+/* Background Grid */
+#app::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background-image: 
+    linear-gradient(rgba(126, 232, 199, 0.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(126, 232, 199, 0.03) 1px, transparent 1px);
+  background-size: 40px 40px;
+  pointer-events: none;
+  z-index: 0;
+}
