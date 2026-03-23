@@ -3,7 +3,7 @@ const CONFIG_KEY = 'pageagent_config'
 const defaultConfig = {
   model: 'deepseek-chat',
   baseURL: 'https://api.deepseek.com/v1',
-  apiKey: '配置你的deepseek api key',
+  apiKey: 'sk-bbeca64cedb64628b8185391affd2168',
   language: 'zh-CN',
   autoObserve: true,
   observeInterval: 500

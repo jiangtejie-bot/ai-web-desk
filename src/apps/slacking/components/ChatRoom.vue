@@ -2,14 +2,14 @@
   <div class="chat-room" ref="chatRoom">
     <vue-advanced-chat
       ref="chatComponent"
-      :height="chatHeight"
-      :current-user-id="currentUserId"
-      :rooms="JSON.stringify(rooms)"
-      :rooms-loaded="true"
-      :messages="JSON.stringify(messages)"
-      :messages-loaded="true"
-      :text-messages="JSON.stringify(textMessages)"
-      :room-id="roomId"
+      :height.prop="chatHeight"
+      :currentUserId.prop="currentUserId"
+      :rooms.prop="rooms"
+      :roomsLoaded.prop="roomsLoaded"
+      :messages.prop="messages"
+      :messagesLoaded.prop="messagesLoaded"
+      :textMessages.prop="textMessages"
+      :roomId.prop="roomId"
       :show-footer="true"
       :show-header="false"
       :show-send-icon="true"
@@ -26,7 +26,7 @@
       :show-message-status-icon="false"
       :show-avatar="true"
       :text-formatting="true"
-      :link-options="JSON.stringify({ disabled: false, target: '_blank', rel: 'nofollow' })"
+      :linkOptions.prop="{ disabled: false, target: '_blank', rel: 'nofollow' }"
       @send-message="sendMessage($event.detail[0])"
       @fetch-messages="fetchMessages($event.detail[0])"
     />
@@ -35,19 +35,23 @@
 
 <script>
 import { register } from 'vue-advanced-chat'
-import { nextTick, onMounted } from 'vue'
+import { nextTick } from 'vue'
+import { storage } from '../../../utils/crypto'
 register()
 
 export default {
   name: 'ChatRoom',
   data() {
-    const currentUser = localStorage.getItem('currentUser') || 'Guest'
+    const currentUser = storage.getItem('currentUser') || 'Guest'
     
     return {
       currentUserId: currentUser,
       currentUser: currentUser,
       roomId: 'slacking-room',
       chatHeight: '100%',
+      roomsLoaded: true,
+      messagesLoaded: true,
+      windowContentEl: null,
       textMessages: {
         TEXTAREA_PLACEHOLDER: '输入消息...',
         TEXTAREA_SEND_BUTTON: '发送'
@@ -126,7 +130,16 @@ export default {
       this.resizeObserver.observe(this.$refs.chatRoom)
     }
 
-    this.$el.addEventListener('window-resize', this.handleWindowResize)
+    // Desktop.vue 会在窗口内容区派发自定义 resize 事件
+    this.windowContentEl = this.$el.closest('.window-content') || this.$el
+    this.windowContentEl.addEventListener('window-resize', this.handleWindowResize)
+
+    // 首次进入时，web component 可能会先进入内部 loading；
+    // 这里在 DOM 就绪后强制把 loaded 状态同步一次，避免卡转圈。
+    nextTick(() => {
+      this.syncLoadedFlags()
+      this.scrollToBottom()
+    })
   },
 
   beforeUnmount() {
@@ -134,10 +147,26 @@ export default {
     if (this.resizeObserver && this.$refs.chatRoom) {
       this.resizeObserver.unobserve(this.$refs.chatRoom)
     }
-    this.$el.removeEventListener('window-resize', this.handleWindowResize)
+    if (this.windowContentEl) {
+      this.windowContentEl.removeEventListener('window-resize', this.handleWindowResize)
+    }
   },
 
   methods: {
+    syncLoadedFlags() {
+      const chatEl = this.$refs.chatComponent
+      if (!chatEl) return
+      try {
+        // 同步属性与 attribute，兼容不同实现/版本的读取方式
+        chatEl.roomsLoaded = !!this.roomsLoaded
+        chatEl.messagesLoaded = !!this.messagesLoaded
+        chatEl.setAttribute('rooms-loaded', String(!!this.roomsLoaded))
+        chatEl.setAttribute('messages-loaded', String(!!this.messagesLoaded))
+      } catch {
+        // no-op
+      }
+    },
+
     handleWindowResize(event) {
       if (event.detail && event.detail.height) {
         this.chatHeight = `${event.detail.height}px`
@@ -151,12 +180,22 @@ export default {
       }
     },
 
-    fetchMessages({ options = {} }) {
-      if (options.reset) {
-        this.messages = this.addMessages(true)
-      } else {
-        this.messages = [...this.addMessages(), ...this.messages]
+    fetchMessages(payload = {}) {
+      // 事件 payload 在首次进入时可能为空；这里做容错，且用 finally 确保不会卡 loading
+      const options = payload?.options || {}
+
+      this.messagesLoaded = false
+      this.syncLoadedFlags()
+
+      try {
+        if (options.reset) {
+          this.messages = this.addMessages(true)
+        } else {
+          this.messages = [...this.addMessages(), ...this.messages]
+        }
+      } finally {
         this.messagesLoaded = true
+        this.syncLoadedFlags()
       }
     },
 
@@ -214,7 +253,7 @@ export default {
       } else {
         for (let i = 0; i < 10; i++) {
           messages.push({
-            _id: this.messages.length + i,
+            _id: Date.now() + i,
             content: `历史消息 ${i + 1}`,
             senderId: 'felix',
             username: '摸鱼达人',
@@ -294,9 +333,12 @@ export default {
       try {
         const chatElement = this.$refs.chatComponent
         if (chatElement) {
-          const messagesContainer = chatElement.shadowRoot?.querySelector('.vac-room-messages')
+          const messagesContainer =
+            chatElement.shadowRoot?.querySelector('.vac-room-messages') ||
+            chatElement.querySelector?.('.vac-room-messages')
           if (messagesContainer) {
             messagesContainer.scrollTop = messagesContainer.scrollHeight
+            return
           }
         }
       } catch (error) {

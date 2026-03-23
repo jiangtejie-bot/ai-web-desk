@@ -4,10 +4,7 @@
       <div class="start-menu-header">
         <div class="user-info">
           <div class="user-avatar">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
-              <circle cx="12" cy="7" r="4"/>
-            </svg>
+            <Icon icon="lucide:user" :width="28" :height="28" />
           </div>
           <div class="user-name">用户</div>
         </div>
@@ -24,7 +21,7 @@
               @click="openApp(app)"
             >
               <div class="app-icon">
-                <component :is="app.icon" />
+                <Icon :icon="app.icon" :width="32" :height="32" />
               </div>
               <span class="app-name">{{ app.name }}</span>
             </div>
@@ -36,20 +33,13 @@
           <div class="tool-list">
             <div class="tool-item">
               <div class="tool-icon">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <rect x="3" y="3" width="18" height="18" rx="2"/>
-                  <line x1="3" y1="9" x2="21" y2="9"/>
-                  <line x1="9" y1="21" x2="9" y2="9"/>
-                </svg>
+                <Icon icon="lucide:calendar" :width="18" :height="18" />
               </div>
               <span class="tool-name">日历</span>
             </div>
             <div class="tool-item">
               <div class="tool-icon">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <circle cx="12" cy="12" r="10"/>
-                  <polyline points="12 6 12 12 16 14"/>
-                </svg>
+                <Icon icon="lucide:clock" :width="18" :height="18" />
               </div>
               <span class="tool-name">时钟</span>
             </div>
@@ -59,17 +49,11 @@
 
       <div class="start-menu-footer">
         <button class="footer-btn" @click="$emit('open-settings')">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <circle cx="12" cy="12" r="3"/>
-            <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/>
-          </svg>
+          <Icon icon="lucide:settings" :width="18" :height="18" />
           <span>设置</span>
         </button>
         <button class="footer-btn power-btn" @click="$emit('power-off')">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <path d="M18.36 6.64a9 9 0 1 1-12.73 0"/>
-            <line x1="12" y1="2" x2="12" y2="12"/>
-          </svg>
+          <Icon icon="lucide:power" :width="18" :height="18" />
           <span>关机</span>
         </button>
       </div>
@@ -78,48 +62,20 @@
 </template>
 
 <script>
-import { markRaw } from 'vue'
 import { apps } from '../config/apps.js'
-import BrowserIcon from '../apps/browser/icons/BrowserIcon.vue'
-import SettingsIcon from '../apps/settings/icons/SettingsIcon.vue'
-import TVIcon from '../apps/tv/icons/TVIcon.vue'
-import BookmarkIcon from '../apps/bookmarks/icons/BookmarkIcon.vue'
-import TranslatorIcon from '../apps/translator/icons/TranslatorIcon.vue'
-import SlackingIcon from '../apps/slacking/icons/SlackingIcon.vue'
-import CalculatorIcon from '../apps/calculator/icons/CalculatorIcon.vue'
+import { Icon } from '@iconify/vue'
 
 export default {
   name: 'StartMenu',
   components: {
-    BrowserIcon,
-    SettingsIcon,
-    TVIcon,
-    BookmarkIcon,
-    TranslatorIcon,
-    SlackingIcon,
-    CalculatorIcon
+    Icon
   },
   data() {
     return {
-      apps: apps.map(app => ({
-        ...app,
-        icon: markRaw(this.getIconComponent(app.icon))
-      }))
+      apps: apps
     }
   },
   methods: {
-    getIconComponent(iconName) {
-      const iconMap = {
-        BrowserIcon,
-        SettingsIcon,
-        TVIcon,
-        BookmarkIcon,
-        TranslatorIcon,
-        SlackingIcon,
-        CalculatorIcon
-      }
-      return iconMap[iconName] || BrowserIcon
-    },
     openApp(app) {
       this.$emit('open-app', app)
       this.$emit('close')
@@ -186,7 +142,7 @@ export default {
   justify-content: center;
 }
 
-.user-avatar svg {
+.user-avatar :deep(.iconify) {
   width: 28px;
   height: 28px;
   color: white;
@@ -248,7 +204,7 @@ export default {
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
 }
 
-.app-icon svg {
+.app-icon :deep(.iconify) {
   width: 24px;
   height: 24px;
   color: white;
@@ -294,7 +250,7 @@ export default {
   background: rgba(102, 126, 234, 0.15);
 }
 
-.tool-icon svg {
+.tool-icon :deep(.iconify) {
   width: 18px;
   height: 18px;
   color: #667eea;
@@ -331,7 +287,7 @@ export default {
   background: rgba(0, 0, 0, 0.05);
 }
 
-.footer-btn svg {
+.footer-btn :deep(.iconify) {
   width: 18px;
   height: 18px;
 }

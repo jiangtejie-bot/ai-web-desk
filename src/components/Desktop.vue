@@ -21,7 +21,7 @@
         @mousedown="startDragIcon($event, app)"
       >
         <div class="icon-container">
-          <component :is="app.icon" />
+          <Icon :icon="app.icon" :width="48" :height="48" />
         </div>
         <span class="icon-label">{{ app.name }}</span>
       </div>
@@ -87,6 +87,38 @@
       @confirm="handleConfirm"
       @cancel="showConfirmDialog = false"
     />
+
+    <div 
+      class="fullscreen-prompt"
+      v-if="showFullscreenPrompt"
+    >
+      <div class="fullscreen-prompt-content">
+        <div class="fullscreen-prompt-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M8 3H5a2 2 0 0 0-2 2v3a2 2 0 0 0 2 2h3a2 2 0 0 0 2-2v-3a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2z"/>
+            <path d="M8 21H5a2 2 0 0 0-2 2v-3a2 2 0 0 0 2 2h3a2 2 0 0 0 2-2v-3a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2z"/>
+          </svg>
+        </div>
+        <h3 class="fullscreen-prompt-title">是否全屏显示？</h3>
+        <p class="fullscreen-prompt-text">全屏模式可以提供更好的浏览体验</p>
+        <div class="fullscreen-prompt-actions">
+          <button class="fullscreen-prompt-btn fullscreen-prompt-btn-primary" @click="acceptDesktopFullscreen">
+            是，全屏显示
+          </button>
+          <button class="fullscreen-prompt-btn fullscreen-prompt-btn-secondary" @click="rejectDesktopFullscreen">
+            否，保持当前状态
+          </button>
+        </div>
+        <div class="fullscreen-prompt-remember">
+          <input 
+            type="checkbox" 
+            id="rememberDesktopFullscreen" 
+            v-model="rememberFullscreen"
+          />
+          <label for="rememberDesktopFullscreen">记住我的选择</label>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -98,13 +130,8 @@ import Taskbar from './Taskbar.vue'
 import AssistantDialog from './AssistantDialog.vue'
 import ConfirmDialog from './ConfirmDialog.vue'
 import LockScreen from './LockScreen.vue'
-import BrowserIcon from '../apps/browser/icons/BrowserIcon.vue'
-import SettingsIcon from '../apps/settings/icons/SettingsIcon.vue'
-import TVIcon from '../apps/tv/icons/TVIcon.vue'
-import BookmarkIcon from '../apps/bookmarks/icons/BookmarkIcon.vue'
-import TranslatorIcon from '../apps/translator/icons/TranslatorIcon.vue'
-import SlackingIcon from '../apps/slacking/icons/SlackingIcon.vue'
-import CalculatorIcon from '../apps/calculator/icons/CalculatorIcon.vue'
+import { Icon } from '@iconify/vue'
+import { storage } from '../utils/crypto'
 
 export default {
   name: 'Desktop',
@@ -114,13 +141,7 @@ export default {
     AssistantDialog,
     ConfirmDialog,
     LockScreen,
-    BrowserIcon,
-    SettingsIcon,
-    TVIcon,
-    BookmarkIcon,
-    TranslatorIcon,
-    SlackingIcon,
-    CalculatorIcon
+    Icon
   },
   data() {
     return {
@@ -136,7 +157,7 @@ export default {
       showAssistant: false,
       showConfirmDialog: false,
       isLocked: false,
-      currentUser: localStorage.getItem('currentUser') || '',
+      currentUser: storage.getItem('currentUser') || '',
       confirmDialogConfig: {
         title: '',
         message: '',
@@ -151,18 +172,131 @@ export default {
       iconWidth: 100,
       iconHeight: 100,
       isDragging: false,
-      dragStartTime: 0
+      dragStartTime: 0,
+      fullscreenState: {
+        isFullscreen: false
+      },
+      autoFullscreen: storage.getItem('desktopAutoFullscreen') === 'true',
+      showFullscreenPrompt: false,
+      rememberFullscreen: false
     }
   },
   mounted() {
+    console.log('Desktop mounted')
     document.addEventListener('mousemove', this.onDragIcon)
     document.addEventListener('mouseup', this.stopDragIcon)
+
+    this.checkFullscreenStatus()
+    document.addEventListener('fullscreenchange', this.handleFullscreenChange)
+    document.addEventListener('webkitfullscreenchange', this.handleFullscreenChange)
+
+    this.checkFullscreenPreference()
   },
   beforeDestroy() {
     document.removeEventListener('mousemove', this.onDragIcon)
     document.removeEventListener('mouseup', this.stopDragIcon)
+
+    document.removeEventListener('fullscreenchange', this.handleFullscreenChange)
+    document.removeEventListener('webkitfullscreenchange', this.handleFullscreenChange)
   },
   methods: {
+    checkFullscreenStatus() {
+      this.fullscreenState.isFullscreen = !!(
+        document.fullscreenElement ||
+        document.webkitFullscreenElement ||
+        document.mozFullScreenElement ||
+        document.msFullscreenElement
+      )
+      console.log('Desktop checkFullscreenStatus - isFullscreen:', this.fullscreenState.isFullscreen)
+    },
+    handleFullscreenChange() {
+      this.checkFullscreenStatus()
+      console.log('Desktop handleFullscreenChange - isFullscreen:', this.fullscreenState.isFullscreen)
+    },
+    enterFullscreen(element = document.documentElement) {
+      console.log('Desktop enterFullscreen')
+      try {
+        if (element?.requestFullscreen) {
+          return element.requestFullscreen()
+        }
+        if (element?.webkitRequestFullscreen) {
+          return element.webkitRequestFullscreen()
+        }
+        if (element?.mozRequestFullScreen) {
+          return element.mozRequestFullScreen()
+        }
+        if (element?.msRequestFullscreen) {
+          return element.msRequestFullscreen()
+        }
+      } finally {
+        // 让 UI 及时更新（最终状态以 fullscreenchange 为准）
+        this.checkFullscreenStatus()
+      }
+    },
+    exitFullscreen() {
+      console.log('Desktop exitFullscreen')
+      try {
+        if (document.exitFullscreen) {
+          return document.exitFullscreen()
+        }
+        if (document.webkitExitFullscreen) {
+          return document.webkitExitFullscreen()
+        }
+        if (document.mozCancelFullScreen) {
+          return document.mozCancelFullScreen()
+        }
+        if (document.msExitFullscreen) {
+          return document.msExitFullscreen()
+        }
+      } finally {
+        this.checkFullscreenStatus()
+      }
+    },
+    toggleFullscreen() {
+      if (this.fullscreenState.isFullscreen) {
+        return this.exitFullscreen()
+      }
+      return this.enterFullscreen()
+    },
+    checkFullscreenPreference() {
+      const shouldFullscreen = storage.getItem('desktopAutoFullscreen') === 'true'
+      console.log('Desktop checkFullscreenPreference - shouldFullscreen:', shouldFullscreen, 'isFullscreen:', this.fullscreenState.isFullscreen)
+      if (shouldFullscreen && !this.fullscreenState.isFullscreen) {
+        // 桌面首次进入时，根据偏好自动全屏
+        this.$nextTick(() => {
+          this.enterFullscreen()
+        })
+      } else if (!shouldFullscreen && !this.fullscreenState.isFullscreen) {
+        this.showFullscreenPromptIfNeeded()
+      }
+    },
+    showFullscreenPromptIfNeeded() {
+      const hasPreference = storage.getItem('desktopAutoFullscreen') !== null
+      console.log('Desktop showFullscreenPromptIfNeeded - hasPreference:', hasPreference, 'isFullscreen:', this.fullscreenState.isFullscreen)
+      if (!hasPreference && !this.fullscreenState.isFullscreen) {
+        setTimeout(() => {
+          console.log('Desktop showing fullscreen prompt')
+          this.showFullscreenPrompt = true
+        }, 800)
+      }
+    },
+    acceptDesktopFullscreen() {
+      console.log('Desktop acceptDesktopFullscreen - rememberFullscreen:', this.rememberFullscreen)
+      if (this.rememberFullscreen) {
+        storage.setItem('desktopAutoFullscreen', 'true')
+        this.autoFullscreen = true
+      }
+      this.showFullscreenPrompt = false
+      this.enterFullscreen()
+    },
+    rejectDesktopFullscreen() {
+      console.log('Desktop rejectDesktopFullscreen - rememberFullscreen:', this.rememberFullscreen)
+      if (this.rememberFullscreen) {
+        storage.setItem('desktopAutoFullscreen', 'false')
+        this.autoFullscreen = false
+      }
+      this.showFullscreenPrompt = false
+    },
     selectApp(app) {
       this.selectedApp = app.id
     },
@@ -271,7 +405,17 @@ export default {
         y: Math.floor((viewportHeight - windowHeight) / 2),
         width: windowWidth,
         height: windowHeight,
-        savedState: null
+        savedState: null,
+        props: app.id === 'browser'
+          ? {
+              fullscreenState: this.fullscreenState,
+              fullscreenActions: {
+                toggle: () => this.toggleFullscreen(),
+                enter: () => this.enterFullscreen(),
+                exit: () => this.exitFullscreen()
+              }
+            }
+          : {}
       }
 
       this.windows.push(newWindow)
@@ -341,7 +485,9 @@ export default {
             const contentEl = windowEl.querySelector('.window-content')
             if (contentEl) {
               const event = new CustomEvent('window-resize', {
-                detail: { height: contentEl.clientHeight }
+                detail: { height: contentEl.clientHeight },
+                bubbles: true,
+                composed: true
               })
               contentEl.dispatchEvent(event)
             }
@@ -373,7 +519,7 @@ export default {
     },
     handleLogin(username) {
       this.currentUser = username
-      localStorage.setItem('currentUser', username)
+      storage.setItem('currentUser', username)
       this.isLocked = false
     },
     powerOff() {
@@ -551,5 +697,137 @@ export default {
 
 .windows-container :deep(.window) {
   pointer-events: auto;
+}
+
+.fullscreen-prompt {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10000;
+  animation: fadeIn 0.3s ease;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.fullscreen-prompt-content {
+  background: white;
+  border-radius: 16px;
+  padding: 32px;
+  max-width: 400px;
+  width: 90%;
+  text-align: center;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+  animation: slideUp 0.3s ease;
+}
+
+@keyframes slideUp {
+  from {
+    transform: translateY(20px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+.fullscreen-prompt-icon {
+  width: 64px;
+  height: 64px;
+  margin: 0 auto 16px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+}
+
+.fullscreen-prompt-icon svg {
+  width: 32px;
+  height: 32px;
+}
+
+.fullscreen-prompt-title {
+  font-size: 20px;
+  font-weight: 600;
+  color: #333;
+  margin: 0 0 8px;
+}
+
+.fullscreen-prompt-text {
+  font-size: 14px;
+  color: #666;
+  margin: 0 0 24px;
+}
+
+.fullscreen-prompt-actions {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 20px;
+}
+
+.fullscreen-prompt-btn {
+  flex: 1;
+  padding: 12px 20px;
+  border: none;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.fullscreen-prompt-btn-primary {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+}
+
+.fullscreen-prompt-btn-primary:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+}
+
+.fullscreen-prompt-btn-secondary {
+  background: #f5f5f5;
+  color: #666;
+}
+
+.fullscreen-prompt-btn-secondary:hover {
+  background: #e8e8e8;
+}
+
+.fullscreen-prompt-remember {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  font-size: 13px;
+  color: #666;
+}
+
+.fullscreen-prompt-remember input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+  cursor: pointer;
+  accent-color: #667eea;
+}
+
+.fullscreen-prompt-remember label {
+  cursor: pointer;
+  user-select: none;
 }
 </style>

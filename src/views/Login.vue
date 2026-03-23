@@ -8,8 +8,8 @@
           <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
         </svg>
       </div>
-      <h1 class="lock-title">欢迎回来</h1>
-      <p class="lock-subtitle">请输入您的账户名称和密码以继续</p>
+      <h1 class="lock-title">欢迎使用 AI Web Desk</h1>
+      <p class="lock-subtitle">请输入您的账户名称和密码登录</p>
       
       <div class="login-form">
         <div class="input-group">
@@ -64,10 +64,10 @@
 
 <script>
 import { storage } from '../utils/crypto'
-import ConfirmDialog from './ConfirmDialog.vue'
+import ConfirmDialog from '../components/ConfirmDialog.vue'
 
 export default {
-  name: 'LockScreen',
+  name: 'LoginPage',
   components: {
     ConfirmDialog
   },
@@ -99,7 +99,7 @@ export default {
       
       storage.setItem('currentUser', this.username.trim())
       storage.setItem('isLoggedIn', true)
-      this.$emit('login', this.username.trim())
+      this.$router.push('/')
     }
   }
 }

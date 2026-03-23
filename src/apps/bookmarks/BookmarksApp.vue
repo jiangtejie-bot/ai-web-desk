@@ -142,6 +142,7 @@
 </template>
 
 <script>
+import { storage } from '../../utils/crypto'
 import AddCategoryDialog from './AddCategoryDialog.vue'
 import AddBookmarkDialog from './AddBookmarkDialog.vue'
 import EditBookmarkDialog from './EditBookmarkDialog.vue'
@@ -194,9 +195,9 @@ export default {
   methods: {
     loadCategories() {
       try {
-        const saved = localStorage.getItem('bookmark_categories')
+        const saved = storage.getItem('bookmark_categories')
         if (saved) {
-          this.categories = JSON.parse(saved)
+          this.categories = saved
         } else {
           this.loadDefaultCategories()
         }
@@ -221,16 +222,16 @@ export default {
     },
     saveCategories() {
       try {
-        localStorage.setItem('bookmark_categories', JSON.stringify(this.categories))
+        storage.setItem('bookmark_categories', this.categories)
       } catch (e) {
         console.error('保存分类失败:', e)
       }
     },
     loadBookmarks() {
       try {
-        const saved = localStorage.getItem('bookmarks_data')
+        const saved = storage.getItem('bookmarks_data')
         if (saved) {
-          this.bookmarks = JSON.parse(saved)
+          this.bookmarks = saved
         }
       } catch (e) {
         console.error('加载书签失败:', e)
@@ -238,7 +239,7 @@ export default {
     },
     saveBookmarks() {
       try {
-        localStorage.setItem('bookmarks_data', JSON.stringify(this.bookmarks))
+        storage.setItem('bookmarks_data', this.bookmarks)
       } catch (e) {
         console.error('保存书签失败:', e)
       }

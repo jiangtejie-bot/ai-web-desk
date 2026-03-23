@@ -19,6 +19,23 @@
             <path d="M5 12h14M12 5l7 7-7 7"/>
           </svg>
         </button>
+        <button class="fullscreen-btn" @click="toggleFullscreen" :title="isFullscreen ? '退出全屏' : '进入全屏'">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path v-if="!isFullscreen" d="M8 3H5a2 2 0 0 0-2 2v3a2 2 0 0 0 2 2h3a2 2 0 0 0 2-2v-3a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2z"/>
+            <path v-if="!isFullscreen" d="M8 21H5a2 2 0 0 0-2 2v-3a2 2 0 0 0 2 2h3a2 2 0 0 0 2-2v3a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2z"/>
+            <path v-if="isFullscreen" d="M7 21h10a2 2 0 0 0 2-2v-3a2 2 0 0 0-2-2h-3a2 2 0 0 0-2 2z"/>
+            <path v-if="isFullscreen" d="M9 9h6v6h-6V9z"/>
+          </svg>
+        </button>
+        <div class="fullscreen-option">
+          <input
+            type="checkbox"
+            id="autoFullscreen"
+            v-model="autoFullscreen"
+            @change="saveFullscreenPreference"
+          />
+          <label for="autoFullscreen">自动全屏</label>
+        </div>
       </div>
     </div>
 
@@ -163,10 +180,21 @@
 </template>
 
 <script>
+import { storage } from '../../utils/crypto'
 import { getConfig } from '../../config/pageagent.js'
 
 export default {
   name: 'BrowserApp',
+  props: {
+    fullscreenState: {
+      type: Object,
+      default: null
+    },
+    fullscreenActions: {
+      type: Object,
+      default: null
+    }
+  },
   data() {
     return {
       targetUrl: '',
@@ -188,10 +216,17 @@ export default {
       currentExecutingStep: null,
       isDragging: false,
       dragOffset: { x: 0, y: 0 },
-      pageObserverIntervals: Array(6).fill(null)
+      pageObserverIntervals: Array(6).fill(null),
+      autoFullscreen: storage.getItem('browserAutoFullscreen') === 'true'
+    }
+  },
+  computed: {
+    isFullscreen() {
+      return !!this.fullscreenState?.isFullscreen
     }
   },
   mounted() {
+    console.log('BrowserApp mounted');
     this.initPageAgent();
     
     this.$nextTick(() => {
@@ -211,14 +246,37 @@ export default {
     });
     
     window.addEventListener('message', this.handleIframeMessage);
+    document.addEventListener('keydown', this.handleKeyDown);
   },
   beforeDestroy() {
     this.pageObserverIntervals.forEach(interval => {
       if (interval) clearInterval(interval);
     });
     window.removeEventListener('message', this.handleIframeMessage);
+    document.removeEventListener('keydown', this.handleKeyDown);
   },
   methods: {
+    saveFullscreenPreference() {
+      storage.setItem('browserAutoFullscreen', this.autoFullscreen.toString());
+      if (this.autoFullscreen && !this.isFullscreen) {
+        this.enterFullscreen();
+      }
+    },
+    handleKeyDown(event) {
+      if (event.key === 'F11') {
+        event.preventDefault();
+        this.toggleFullscreen();
+      }
+    },
+    toggleFullscreen() {
+      this.fullscreenActions?.toggle?.()
+    },
+    enterFullscreen() {
+      this.fullscreenActions?.enter?.()
+    },
+    exitFullscreen() {
+      this.fullscreenActions?.exit?.()
+    },
     async initPageAgent() {
       try {
         const { PageAgent } = await import('page-agent');
@@ -554,6 +612,180 @@ export default {
 .load-btn svg {
   width: 16px;
   height: 16px;
+}
+
+.fullscreen-btn {
+  padding: 8px 12px;
+  background: white;
+  border: 1px solid #e0e0e0;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.fullscreen-btn:hover {
+  background: #f0f0f0;
+}
+
+.fullscreen-btn svg {
+  width: 18px;
+  height: 18px;
+  color: #666;
+}
+
+.fullscreen-option {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  color: #666;
+}
+
+.fullscreen-option input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+  cursor: pointer;
+  accent-color: #667eea;
+}
+
+.fullscreen-option label {
+  cursor: pointer;
+  user-select: none;
+}
+
+.fullscreen-prompt {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  animation: fadeIn 0.3s ease;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.fullscreen-prompt-content {
+  background: white;
+  border-radius: 16px;
+  padding: 32px;
+  max-width: 400px;
+  width: 90%;
+  text-align: center;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+  animation: slideUp 0.3s ease;
+}
+
+@keyframes slideUp {
+  from {
+    transform: translateY(20px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+.fullscreen-prompt-icon {
+  width: 64px;
+  height: 64px;
+  margin: 0 auto 16px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+}
+
+.fullscreen-prompt-icon svg {
+  width: 32px;
+  height: 32px;
+}
+
+.fullscreen-prompt-title {
+  font-size: 20px;
+  font-weight: 600;
+  color: #333;
+  margin: 0 0 8px;
+}
+
+.fullscreen-prompt-text {
+  font-size: 14px;
+  color: #666;
+  margin: 0 0 24px;
+}
+
+.fullscreen-prompt-actions {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 20px;
+}
+
+.fullscreen-prompt-btn {
+  flex: 1;
+  padding: 12px 20px;
+  border: none;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.fullscreen-prompt-btn-primary {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+}
+
+.fullscreen-prompt-btn-primary:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+}
+
+.fullscreen-prompt-btn-secondary {
+  background: #f5f5f5;
+  color: #666;
+}
+
+.fullscreen-prompt-btn-secondary:hover {
+  background: #e8e8e8;
+}
+
+.fullscreen-prompt-remember {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  font-size: 13px;
+  color: #666;
+}
+
+.fullscreen-prompt-remember input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+  cursor: pointer;
+  accent-color: #667eea;
+}
+
+.fullscreen-prompt-remember label {
+  cursor: pointer;
+  user-select: none;
 }
 
 .windows-grid {

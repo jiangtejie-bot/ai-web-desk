@@ -121,6 +121,7 @@
 </template>
 
 <script>
+import { storage } from '../../utils/crypto'
 import videojs from 'video.js'
 import 'video.js/dist/video-js.css'
 import AddSourceDialog from './AddSourceDialog.vue'
@@ -401,9 +402,9 @@ export default {
     },
     loadSources() {
       try {
-        const saved = localStorage.getItem('tv_sources')
+        const saved = storage.getItem('tv_sources')
         if (saved) {
-          this.sources = JSON.parse(saved)
+          this.sources = saved
         }
       } catch (e) {
         console.error('加载直播源失败:', e)
@@ -411,7 +412,7 @@ export default {
     },
     saveSources() {
       try {
-        localStorage.setItem('tv_sources', JSON.stringify(this.sources))
+        storage.setItem('tv_sources', this.sources)
       } catch (e) {
         console.error('保存直播源失败:', e)
       }
